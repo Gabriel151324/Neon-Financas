@@ -123,6 +123,8 @@ const AppContent: React.FC = () => {
 };
 
 function App() {
+          }
+  )
   return (
     <AuthProvider>
       <ThemeProvider>
