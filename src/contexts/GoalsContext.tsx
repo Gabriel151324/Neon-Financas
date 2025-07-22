@@ -1,5 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { 
+  collection, 
+  addDoc, 
+  deleteDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot 
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from './AuthContext';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -37,12 +49,13 @@ export const useGoals = () => {
 
 export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const { currentUser } = useAuth();
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      loadGoals();
-    } else {
+    if (!currentUser) {
+      setGoals([]);
+      return;
       setGoals([]);
     }
   }, [user]);
@@ -60,14 +73,34 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Error loading goals:', error);
       return;
     }
-
     setGoals(data || []);
-  };
+    // Listen to real-time updates from Firestore
+    const q = query(
+      collection(db, 'goals'),
+      where('userId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
 
-  const addGoal = async (goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const goalsData: Goal[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        goalsData.push({
+          id: doc.id,
+          name: data.name,
+          targetAmount: data.targetAmount,
+          currentAmount: data.currentAmount,
+          deadline: data.deadline,
+          createdAt: data.createdAt.toDate().toISOString(),
+          completedAt: data.completedAt ? data.completedAt.toDate().toISOString() : undefined
+        });
+      });
+      setGoals(goalsData);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
     if (!user) return;
-
-    const newGoal: Goal = {
       ...goal,
       id: uuidv4(),
       createdAt: new Date().toISOString()
@@ -78,11 +111,21 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .insert([{ ...newGoal, user_id: user.id }]);
 
     if (error) {
-      console.error('Error adding goal:', error);
-      return;
-    }
+  const addGoal = async (goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    if (!currentUser) return;
 
-    setGoals(prev => [newGoal, ...prev]);
+    try {
+      const goalData = {
+        ...goal,
+        userId: currentUser.uid,
+        createdAt: new Date(),
+        completedAt: goal.currentAmount >= goal.targetAmount ? new Date() : null
+      };
+      
+      await addDoc(collection(db, 'goals'), goalData);
+    } catch (error) {
+      console.error('Erro ao adicionar meta:', error);
+    }
   };
 
   const deleteGoal = async (id: string) => {
@@ -98,8 +141,14 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Error deleting goal:', error);
       return;
     }
+  const deleteGoal = async (id: string) => {
+    if (!currentUser) return;
 
-    setGoals(prev => prev.filter(g => g.id !== id));
+    try {
+      await deleteDoc(doc(db, 'goals', id));
+    } catch (error) {
+      console.error('Erro ao excluir meta:', error);
+    }
   };
 
   const updateGoal = async (id: string, goal: Omit<Goal, 'id' | 'createdAt'>) => {
@@ -164,25 +213,22 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .eq('user_id', user.id);
 
     if (error) {
-      console.error('Error updating goal progress:', error);
-      return;
-    }
+  const updateGoalProgress = async (id: string, amount: number) => {
+    if (!currentUser) return;
 
-    setGoals(prev => 
-      prev.map(g => {
-        if (g.id === id) {
-          const updatedGoal = { ...g, ...updatedData };
-          // Check if goal is now completed
-          if (updatedGoal.currentAmount >= updatedGoal.targetAmount && !g.completedAt) {
-            updatedGoal.completedAt = new Date().toISOString();
-          } else if (updatedGoal.currentAmount < updatedGoal.targetAmount && g.completedAt) {
-            delete updatedGoal.completedAt;
-          }
-          return updatedGoal;
-        }
-        return g;
-      })
-    );
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+
+    try {
+      const updateData = {
+        currentAmount: amount,
+        completedAt: amount >= goal.targetAmount ? new Date() : null
+      };
+      
+      await updateDoc(doc(db, 'goals', id), updateData);
+    } catch (error) {
+      console.error('Erro ao atualizar progresso da meta:', error);
+    }
   };
 
   const getCompletedGoals = () => {

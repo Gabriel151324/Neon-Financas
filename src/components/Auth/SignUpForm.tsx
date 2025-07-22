@@ -7,7 +7,7 @@ interface SignUpFormProps {
 }
 
 const SignUpForm: React.FC<SignUpFormProps> = ({ onToggleMode }) => {
-  const { signUp } = useAuth();
+  const { signup } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -37,12 +37,27 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onToggleMode }) => {
       return;
     }
 
-    const { error } = await signUp(formData.email, formData.password);
-    
-    if (error) {
-      setError(error.message);
-    } else {
+    try {
+      await signup(formData.email, formData.password);
       setSuccess(true);
+    } catch (error: any) {
+      let errorMessage = 'Erro ao criar conta';
+      
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'Este email já está em uso';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Email inválido';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Senha muito fraca';
+          break;
+        default:
+          errorMessage = error.message || 'Erro ao criar conta';
+      }
+      
+      setError(errorMessage);
     }
     
     setLoading(false);
@@ -59,14 +74,8 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onToggleMode }) => {
             Conta criada com sucesso!
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Verifique seu email para confirmar sua conta e fazer login.
+            Sua conta foi criada e você já está logado. Bem-vindo ao Neon Finanças!
           </p>
-          <button
-            onClick={onToggleMode}
-            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105"
-          >
-            Ir para Login
-          </button>
         </div>
       </div>
     );

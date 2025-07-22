@@ -1,5 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { 
+  collection, 
+  addDoc, 
+  deleteDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot 
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from './AuthContext';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -37,6 +49,7 @@ export const useTransactions = () => {
 
 export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { currentUser } = useAuth();
   const { user } = useAuth();
 
   const categories = [
@@ -56,9 +69,9 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   ];
 
   useEffect(() => {
-    if (user) {
-      loadTransactions();
-    } else {
+    if (!currentUser) {
+      setTransactions([]);
+      return;
       setTransactions([]);
     }
   }, [user]);
@@ -76,14 +89,34 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.error('Error loading transactions:', error);
       return;
     }
-
     setTransactions(data || []);
-  };
+    // Listen to real-time updates from Firestore
+    const q = query(
+      collection(db, 'transactions'),
+      where('userId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
 
-  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const transactionsData: Transaction[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        transactionsData.push({
+          id: doc.id,
+          type: data.type,
+          description: data.description,
+          amount: data.amount,
+          date: data.date,
+          category: data.category,
+          createdAt: data.createdAt.toDate().toISOString()
+        });
+      });
+      setTransactions(transactionsData);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
     if (!user) return;
-
-    const newTransaction: Transaction = {
       ...transaction,
       id: uuidv4(),
       createdAt: new Date().toISOString()
@@ -94,11 +127,18 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       .insert([{ ...newTransaction, user_id: user.id }]);
 
     if (error) {
-      console.error('Error adding transaction:', error);
-      return;
-    }
+  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+    if (!currentUser) return;
 
-    setTransactions(prev => [newTransaction, ...prev]);
+    try {
+      await addDoc(collection(db, 'transactions'), {
+        ...transaction,
+        userId: currentUser.uid,
+        createdAt: new Date()
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar transação:', error);
+    }
   };
 
   const deleteTransaction = async (id: string) => {
@@ -114,8 +154,14 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.error('Error deleting transaction:', error);
       return;
     }
+  const deleteTransaction = async (id: string) => {
+    if (!currentUser) return;
 
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    try {
+      await deleteDoc(doc(db, 'transactions', id));
+    } catch (error) {
+      console.error('Erro ao excluir transação:', error);
+    }
   };
 
   const updateTransaction = async (id: string, transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
@@ -131,10 +177,14 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.error('Error updating transaction:', error);
       return;
     }
+  const updateTransaction = async (id: string, transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+    if (!currentUser) return;
 
-    setTransactions(prev => 
-      prev.map(t => t.id === id ? { ...t, ...transaction } : t)
-    );
+    try {
+      await updateDoc(doc(db, 'transactions', id), transaction);
+    } catch (error) {
+      console.error('Erro ao atualizar transação:', error);
+    }
   };
 
   const getBalance = () => {

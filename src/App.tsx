@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TransactionsProvider } from './contexts/TransactionsContext';
 import { GoalsProvider } from './contexts/GoalsContext';
+import AuthScreen from './components/Auth/AuthScreen';
 import AuthScreen from './components/Auth/AuthScreen';
 import Header from './components/Header';
 import Navigation from './components/Navigation';
@@ -53,6 +55,21 @@ const AppContent: React.FC = () => {
     );
   }
 
+  if (!currentUser) {
+    return <AuthScreen />;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return <AuthScreen />;
   }
@@ -73,6 +90,15 @@ const AppContent: React.FC = () => {
   };
 
   return (
+    <TransactionsProvider>
+      <GoalsProvider>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+          <Header />
+          <Navigation 
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            setShowTransactionModal={setShowTransactionModal}
+          />
     <TransactionsProvider>
       <GoalsProvider>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
