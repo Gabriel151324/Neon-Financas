@@ -12,8 +12,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
-import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
 
 export interface Transaction {
   id: string;
@@ -50,7 +48,6 @@ export const useTransactions = () => {
 export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const { currentUser } = useAuth();
-  const { user } = useAuth();
 
   const categories = [
     'Alimentação',
@@ -72,24 +69,8 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!currentUser) {
       setTransactions([]);
       return;
-      setTransactions([]);
     }
-  }, [user]);
 
-  const loadTransactions = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error loading transactions:', error);
-      return;
-    }
-    setTransactions(data || []);
     // Listen to real-time updates from Firestore
     const q = query(
       collection(db, 'transactions'),
@@ -116,17 +97,7 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     return () => unsubscribe();
   }, [currentUser]);
-    if (!user) return;
-      ...transaction,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
 
-    const { error } = await supabase
-      .from('transactions')
-      .insert([{ ...newTransaction, user_id: user.id }]);
-
-    if (error) {
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
     if (!currentUser) return;
 
@@ -142,19 +113,6 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const deleteTransaction = async (id: string) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error deleting transaction:', error);
-      return;
-    }
-  const deleteTransaction = async (id: string) => {
     if (!currentUser) return;
 
     try {
@@ -164,19 +122,6 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const updateTransaction = async (id: string, transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('transactions')
-      .update(transaction)
-      .eq('id', id)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error updating transaction:', error);
-      return;
-    }
   const updateTransaction = async (id: string, transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
     if (!currentUser) return;
 

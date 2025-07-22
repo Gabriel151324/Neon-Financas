@@ -12,8 +12,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
-import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
 
 export interface Goal {
   id: string;
@@ -50,30 +48,13 @@ export const useGoals = () => {
 export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const { currentUser } = useAuth();
-  const { user } = useAuth();
 
   useEffect(() => {
     if (!currentUser) {
       setGoals([]);
       return;
-      setGoals([]);
     }
-  }, [user]);
 
-  const loadGoals = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('goals')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error loading goals:', error);
-      return;
-    }
-    setGoals(data || []);
     // Listen to real-time updates from Firestore
     const q = query(
       collection(db, 'goals'),
@@ -100,17 +81,7 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     return () => unsubscribe();
   }, [currentUser]);
-    if (!user) return;
-      ...goal,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
 
-    const { error } = await supabase
-      .from('goals')
-      .insert([{ ...newGoal, user_id: user.id }]);
-
-    if (error) {
   const addGoal = async (goal: Omit<Goal, 'id' | 'createdAt'>) => {
     if (!currentUser) return;
 
@@ -129,19 +100,6 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteGoal = async (id: string) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('goals')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error deleting goal:', error);
-      return;
-    }
-  const deleteGoal = async (id: string) => {
     if (!currentUser) return;
 
     try {
@@ -152,67 +110,20 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateGoal = async (id: string, goal: Omit<Goal, 'id' | 'createdAt'>) => {
-    if (!user) return;
+    if (!currentUser) return;
 
-    const updatedGoal = { ...goal };
-    
-    // Check if goal is now completed
-    if (updatedGoal.currentAmount >= updatedGoal.targetAmount) {
-      updatedGoal.completedAt = new Date().toISOString();
-    } else {
-      delete updatedGoal.completedAt;
+    try {
+      const updateData = {
+        ...goal,
+        completedAt: goal.currentAmount >= goal.targetAmount ? new Date() : null
+      };
+      
+      await updateDoc(doc(db, 'goals', id), updateData);
+    } catch (error) {
+      console.error('Erro ao atualizar meta:', error);
     }
-
-    const { error } = await supabase
-      .from('goals')
-      .update(updatedGoal)
-      .eq('id', id)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error updating goal:', error);
-      return;
-    }
-
-    setGoals(prev => 
-      prev.map(g => {
-        if (g.id === id) {
-          const finalGoal = { ...g, ...updatedGoal };
-          // Check if goal is now completed
-          if (finalGoal.currentAmount >= finalGoal.targetAmount && !g.completedAt) {
-            finalGoal.completedAt = new Date().toISOString();
-          } else if (finalGoal.currentAmount < finalGoal.targetAmount && g.completedAt) {
-            delete finalGoal.completedAt;
-          }
-          return finalGoal;
-        }
-        return g;
-      })
-    );
   };
 
-  const updateGoalProgress = async (id: string, amount: number) => {
-    if (!user) return;
-
-    const goal = goals.find(g => g.id === id);
-    if (!goal) return;
-
-    const updatedData = { currentAmount: amount };
-    
-    // Check if goal is now completed
-    if (amount >= goal.targetAmount && !goal.completedAt) {
-      updatedData.completedAt = new Date().toISOString();
-    } else if (amount < goal.targetAmount && goal.completedAt) {
-      delete updatedData.completedAt;
-    }
-
-    const { error } = await supabase
-      .from('goals')
-      .update(updatedData)
-      .eq('id', id)
-      .eq('user_id', user.id);
-
-    if (error) {
   const updateGoalProgress = async (id: string, amount: number) => {
     if (!currentUser) return;
 
