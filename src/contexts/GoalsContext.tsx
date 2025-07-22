@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
 
 export interface Goal {
   id: string;
@@ -35,54 +37,141 @@ export const useGoals = () => {
 
 export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const saved = localStorage.getItem('neon-finances-goals');
-    if (saved) {
-      setGoals(JSON.parse(saved));
+    if (user) {
+      loadGoals();
+    } else {
+      setGoals([]);
     }
-  }, []);
+  }, [user]);
 
-  useEffect(() => {
-    localStorage.setItem('neon-finances-goals', JSON.stringify(goals));
-  }, [goals]);
+  const loadGoals = async () => {
+    if (!user) return;
 
-  const addGoal = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    const { data, error } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading goals:', error);
+      return;
+    }
+
+    setGoals(data || []);
+  };
+
+  const addGoal = async (goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    if (!user) return;
+
     const newGoal: Goal = {
       ...goal,
       id: uuidv4(),
       createdAt: new Date().toISOString()
     };
-    setGoals(prev => [...prev, newGoal]);
+
+    const { error } = await supabase
+      .from('goals')
+      .insert([{ ...newGoal, user_id: user.id }]);
+
+    if (error) {
+      console.error('Error adding goal:', error);
+      return;
+    }
+
+    setGoals(prev => [newGoal, ...prev]);
   };
 
-  const deleteGoal = (id: string) => {
+  const deleteGoal = async (id: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('goals')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error deleting goal:', error);
+      return;
+    }
+
     setGoals(prev => prev.filter(g => g.id !== id));
   };
 
-  const updateGoal = (id: string, goal: Omit<Goal, 'id' | 'createdAt'>) => {
+  const updateGoal = async (id: string, goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    if (!user) return;
+
+    const updatedGoal = { ...goal };
+    
+    // Check if goal is now completed
+    if (updatedGoal.currentAmount >= updatedGoal.targetAmount) {
+      updatedGoal.completedAt = new Date().toISOString();
+    } else {
+      delete updatedGoal.completedAt;
+    }
+
+    const { error } = await supabase
+      .from('goals')
+      .update(updatedGoal)
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating goal:', error);
+      return;
+    }
+
     setGoals(prev => 
       prev.map(g => {
         if (g.id === id) {
-          const updatedGoal = { ...g, ...goal };
+          const finalGoal = { ...g, ...updatedGoal };
           // Check if goal is now completed
-          if (updatedGoal.currentAmount >= updatedGoal.targetAmount && !g.completedAt) {
-            updatedGoal.completedAt = new Date().toISOString();
-          } else if (updatedGoal.currentAmount < updatedGoal.targetAmount && g.completedAt) {
-            delete updatedGoal.completedAt;
+          if (finalGoal.currentAmount >= finalGoal.targetAmount && !g.completedAt) {
+            finalGoal.completedAt = new Date().toISOString();
+          } else if (finalGoal.currentAmount < finalGoal.targetAmount && g.completedAt) {
+            delete finalGoal.completedAt;
           }
-          return updatedGoal;
+          return finalGoal;
         }
         return g;
       })
     );
   };
 
-  const updateGoalProgress = (id: string, amount: number) => {
+  const updateGoalProgress = async (id: string, amount: number) => {
+    if (!user) return;
+
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+
+    const updatedData = { currentAmount: amount };
+    
+    // Check if goal is now completed
+    if (amount >= goal.targetAmount && !goal.completedAt) {
+      updatedData.completedAt = new Date().toISOString();
+    } else if (amount < goal.targetAmount && goal.completedAt) {
+      delete updatedData.completedAt;
+    }
+
+    const { error } = await supabase
+      .from('goals')
+      .update(updatedData)
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating goal progress:', error);
+      return;
+    }
+
     setGoals(prev => 
       prev.map(g => {
         if (g.id === id) {
-          const updatedGoal = { ...g, currentAmount: amount };
+          const updatedGoal = { ...g, ...updatedData };
           // Check if goal is now completed
           if (updatedGoal.currentAmount >= updatedGoal.targetAmount && !g.completedAt) {
             updatedGoal.completedAt = new Date().toISOString();
