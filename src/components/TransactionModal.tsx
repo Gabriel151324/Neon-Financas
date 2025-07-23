@@ -94,10 +94,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
             {transaction ? 'Editar Transação' : 'Nova Transação'}
           </h2>
           <button
@@ -108,15 +108,15 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tipo
             </label>
             <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="expense">💸 Gasto</option>
               <option value="income">💰 Lucro</option>
@@ -124,7 +124,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Descrição
             </label>
             <input
@@ -142,7 +142,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Valor (R$)
             </label>
             <input
@@ -161,7 +161,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Data
             </label>
             <input
@@ -178,7 +178,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Categoria
             </label>
             <select
@@ -203,13 +203,13 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="flex-1 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105"
+              className="flex-1 px-4 py-2 text-sm bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105"
             >
               {transaction ? 'Atualizar' : 'Salvar'}
             </button>

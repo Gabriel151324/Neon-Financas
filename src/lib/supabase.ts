@@ -42,4 +42,6 @@ export interface Challenge {
   status: 'pending' | 'completed'
   user_id?: string
   created_at?: string
+  week: string
+  completed_at?: string
 }

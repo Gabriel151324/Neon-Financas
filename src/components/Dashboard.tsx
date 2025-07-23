@@ -32,66 +32,66 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform duration-200">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 transform hover:scale-105 transition-transform duration-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Saldo Total</p>
-              <p className={`text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Saldo Total</p>
+              <p className={`text-lg sm:text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(balance)}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 hidden sm:block">
                 {balance >= 0 ? 'Situação positiva' : 'Atenção aos gastos'}
               </p>
             </div>
-            <div className={`p-3 rounded-full ${balance >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
-              <DollarSign className={`w-6 h-6 ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            <div className={`p-2 sm:p-3 rounded-full ${balance >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+              <DollarSign className={`w-5 h-5 sm:w-6 sm:h-6 ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform duration-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 transform hover:scale-105 transition-transform duration-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Receitas</p>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Receitas</p>
+              <p className="text-lg sm:text-2xl font-bold text-green-600">
                 {formatCurrency(totalIncome)}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 hidden sm:block">
                 {income.length} transação{income.length !== 1 ? 'ões' : ''}
               </p>
             </div>
-            <div className="p-3 rounded-full bg-green-100 dark:bg-green-900">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+            <div className="p-2 sm:p-3 rounded-full bg-green-100 dark:bg-green-900">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform duration-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 transform hover:scale-105 transition-transform duration-200 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Despesas</p>
-              <p className="text-2xl font-bold text-red-600">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Despesas</p>
+              <p className="text-lg sm:text-2xl font-bold text-red-600">
                 {formatCurrency(totalExpenses)}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 hidden sm:block">
                 {expenses.length} transação{expenses.length !== 1 ? 'ões' : ''}
               </p>
             </div>
-            <div className="p-3 rounded-full bg-red-100 dark:bg-red-900">
-              <TrendingDown className="w-6 h-6 text-red-600" />
+            <div className="p-2 sm:p-3 rounded-full bg-red-100 dark:bg-red-900">
+              <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-            <Filter className="w-5 h-5 mr-2" />
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Filtros
           </h2>
           {(selectedMonth || selectedCategory) && (
@@ -104,15 +104,15 @@ const Dashboard: React.FC = () => {
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Mês
             </label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">Todos os meses</option>
               {months.map(month => (
@@ -124,13 +124,13 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Categoria
             </label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">Todas as categorias</option>
               {categories.map(category => (
@@ -144,7 +144,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         <ExpenseChart transactions={filteredTransactions} />
         <MonthlyChart transactions={filteredTransactions} />
       </div>

@@ -90,10 +90,10 @@ const GoalModal: React.FC<GoalModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
             <Target className="w-6 h-6 mr-2 text-blue-500" />
             {goal ? 'Editar Meta' : 'Nova Meta Financeira'}
           </h2>
@@ -105,9 +105,9 @@ const GoalModal: React.FC<GoalModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Nome da Meta *
             </label>
             <input
@@ -125,7 +125,7 @@ const GoalModal: React.FC<GoalModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Valor Objetivo (R$) *
             </label>
             <input
@@ -144,7 +144,7 @@ const GoalModal: React.FC<GoalModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Valor Atual (R$) *
             </label>
             <input
@@ -163,7 +163,7 @@ const GoalModal: React.FC<GoalModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Prazo (Opcional)
             </label>
             <input
@@ -183,13 +183,13 @@ const GoalModal: React.FC<GoalModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="flex-1 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
+              className="flex-1 px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
             >
               {goal ? 'Atualizar' : 'Criar Meta'}
             </button>
