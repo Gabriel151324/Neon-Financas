@@ -1,17 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  collection, 
-  addDoc, 
-  deleteDoc, 
-  updateDoc, 
-  doc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot 
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { useAuth } from './AuthContext';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface Goal {
   id: string;
@@ -47,99 +35,60 @@ export const useGoals = () => {
 
 export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
-  const { currentUser } = useAuth();
 
+  // Load goals from localStorage on mount
   useEffect(() => {
-    if (!currentUser) {
-      setGoals([]);
-      return;
+    const savedGoals = localStorage.getItem('neon-finances-goals');
+    if (savedGoals) {
+      try {
+        const parsedGoals = JSON.parse(savedGoals);
+        setGoals(parsedGoals);
+      } catch (error) {
+        console.error('Error loading goals from localStorage:', error);
+      }
     }
+  }, []);
 
-    // Listen to real-time updates from Firestore
-    const q = query(
-      collection(db, 'goals'),
-      where('userId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
+  // Save goals to localStorage whenever goals change
+  useEffect(() => {
+    localStorage.setItem('neon-finances-goals', JSON.stringify(goals));
+  }, [goals]);
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const goalsData: Goal[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        goalsData.push({
-          id: doc.id,
-          name: data.name,
-          targetAmount: data.targetAmount,
-          currentAmount: data.currentAmount,
-          deadline: data.deadline,
-          createdAt: data.createdAt.toDate().toISOString(),
-          completedAt: data.completedAt ? data.completedAt.toDate().toISOString() : undefined
-        });
-      });
-      setGoals(goalsData);
-    });
+  const addGoal = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    const newGoal: Goal = {
+      ...goal,
+      id: uuidv4(),
+      createdAt: new Date().toISOString(),
+      completedAt: goal.currentAmount >= goal.targetAmount ? new Date().toISOString() : undefined
+    };
+    setGoals(prev => [newGoal, ...prev]);
+  };
 
-    return () => unsubscribe();
-  }, [currentUser]);
+  const deleteGoal = (id: string) => {
+    setGoals(prev => prev.filter(g => g.id !== id));
+  };
 
-  const addGoal = async (goal: Omit<Goal, 'id' | 'createdAt'>) => {
-    if (!currentUser) return;
-
-    try {
-      const goalData = {
+  const updateGoal = (id: string, goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    setGoals(prev => prev.map(g => 
+      g.id === id ? { 
+        ...g, 
         ...goal,
-        userId: currentUser.uid,
-        createdAt: new Date(),
-        completedAt: goal.currentAmount >= goal.targetAmount ? new Date() : null
-      };
-      
-      await addDoc(collection(db, 'goals'), goalData);
-    } catch (error) {
-      console.error('Erro ao adicionar meta:', error);
-    }
+        completedAt: goal.currentAmount >= goal.targetAmount ? new Date().toISOString() : undefined
+      } : g
+    ));
   };
 
-  const deleteGoal = async (id: string) => {
-    if (!currentUser) return;
-
-    try {
-      await deleteDoc(doc(db, 'goals', id));
-    } catch (error) {
-      console.error('Erro ao excluir meta:', error);
-    }
-  };
-
-  const updateGoal = async (id: string, goal: Omit<Goal, 'id' | 'createdAt'>) => {
-    if (!currentUser) return;
-
-    try {
-      const updateData = {
-        ...goal,
-        completedAt: goal.currentAmount >= goal.targetAmount ? new Date() : null
-      };
-      
-      await updateDoc(doc(db, 'goals', id), updateData);
-    } catch (error) {
-      console.error('Erro ao atualizar meta:', error);
-    }
-  };
-
-  const updateGoalProgress = async (id: string, amount: number) => {
-    if (!currentUser) return;
-
+  const updateGoalProgress = (id: string, amount: number) => {
     const goal = goals.find(g => g.id === id);
     if (!goal) return;
 
-    try {
-      const updateData = {
+    setGoals(prev => prev.map(g => 
+      g.id === id ? { 
+        ...g, 
         currentAmount: amount,
-        completedAt: amount >= goal.targetAmount ? new Date() : null
-      };
-      
-      await updateDoc(doc(db, 'goals', id), updateData);
-    } catch (error) {
-      console.error('Erro ao atualizar progresso da meta:', error);
-    }
+        completedAt: amount >= goal.targetAmount ? new Date().toISOString() : undefined
+      } : g
+    ));
   };
 
   const getCompletedGoals = () => {

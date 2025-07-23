@@ -1,17 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  collection, 
-  addDoc, 
-  deleteDoc, 
-  updateDoc, 
-  doc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot 
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { useAuth } from './AuthContext';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface Transaction {
   id: string;
@@ -47,7 +35,6 @@ export const useTransactions = () => {
 
 export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const { currentUser } = useAuth();
 
   const categories = [
     'Alimentação',
@@ -65,71 +52,41 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     'Dividendos'
   ];
 
+  // Load transactions from localStorage on mount
   useEffect(() => {
-    if (!currentUser) {
-      setTransactions([]);
-      return;
+    const savedTransactions = localStorage.getItem('neon-finances-transactions');
+    if (savedTransactions) {
+      try {
+        const parsedTransactions = JSON.parse(savedTransactions);
+        setTransactions(parsedTransactions);
+      } catch (error) {
+        console.error('Error loading transactions from localStorage:', error);
+      }
     }
+  }, []);
 
-    // Listen to real-time updates from Firestore
-    const q = query(
-      collection(db, 'transactions'),
-      where('userId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
+  // Save transactions to localStorage whenever transactions change
+  useEffect(() => {
+    localStorage.setItem('neon-finances-transactions', JSON.stringify(transactions));
+  }, [transactions]);
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const transactionsData: Transaction[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        transactionsData.push({
-          id: doc.id,
-          type: data.type,
-          description: data.description,
-          amount: data.amount,
-          date: data.date,
-          category: data.category,
-          createdAt: data.createdAt.toDate().toISOString()
-        });
-      });
-      setTransactions(transactionsData);
-    });
-
-    return () => unsubscribe();
-  }, [currentUser]);
-
-  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
-    if (!currentUser) return;
-
-    try {
-      await addDoc(collection(db, 'transactions'), {
-        ...transaction,
-        userId: currentUser.uid,
-        createdAt: new Date()
-      });
-    } catch (error) {
-      console.error('Erro ao adicionar transação:', error);
-    }
+  const addTransaction = (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+    const newTransaction: Transaction = {
+      ...transaction,
+      id: uuidv4(),
+      createdAt: new Date().toISOString()
+    };
+    setTransactions(prev => [newTransaction, ...prev]);
   };
 
-  const deleteTransaction = async (id: string) => {
-    if (!currentUser) return;
-
-    try {
-      await deleteDoc(doc(db, 'transactions', id));
-    } catch (error) {
-      console.error('Erro ao excluir transação:', error);
-    }
+  const deleteTransaction = (id: string) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
-  const updateTransaction = async (id: string, transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
-    if (!currentUser) return;
-
-    try {
-      await updateDoc(doc(db, 'transactions', id), transaction);
-    } catch (error) {
-      console.error('Erro ao atualizar transação:', error);
-    }
+  const updateTransaction = (id: string, transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+    setTransactions(prev => prev.map(t => 
+      t.id === id ? { ...t, ...transaction } : t
+    ));
   };
 
   const getBalance = () => {
