@@ -1,26 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-
-export interface Transaction {
-  id: string;
-  type: 'income' | 'expense';
-  description: string;
-  amount: number;
-  date: string;
-  category: string;
-  createdAt: string;
-}
+import { supabase, Transaction } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 interface TransactionsContextType {
   transactions: Transaction[];
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => void;
-  deleteTransaction: (id: string) => void;
-  updateTransaction: (id: string, transaction: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  updateTransaction: (id: string, transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
   getBalance: () => number;
   getTransactionsByType: (type: 'income' | 'expense') => Transaction[];
   getTransactionsByMonth: (month: string) => Transaction[];
   getTransactionsByCategory: (category: string) => Transaction[];
   categories: string[];
+  loading: boolean;
 }
 
 const TransactionsContext = createContext<TransactionsContextType | undefined>(undefined);
@@ -34,7 +26,9 @@ export const useTransactions = () => {
 };
 
 export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const categories = [
     'Alimentação',
@@ -52,48 +46,93 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     'Dividendos'
   ];
 
-  // Load transactions from localStorage on mount
-  useEffect(() => {
-    const savedTransactions = localStorage.getItem('neon-finances-transactions');
-    if (savedTransactions) {
-      try {
-        const parsedTransactions = JSON.parse(savedTransactions);
-        setTransactions(parsedTransactions);
-      } catch (error) {
-        console.error('Error loading transactions from localStorage:', error);
-      }
+  // Carregar transações do usuário
+  const loadTransactions = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar transações:', error);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  };
 
-  // Save transactions to localStorage whenever transactions change
   useEffect(() => {
-    localStorage.setItem('neon-finances-transactions', JSON.stringify(transactions));
-  }, [transactions]);
+    if (user) {
+      loadTransactions();
+    } else {
+      setTransactions([]);
+    }
+  }, [user]);
 
-  const addTransaction = (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
-    setTransactions(prev => [newTransaction, ...prev]);
+  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert([{ ...transaction, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      setTransactions(prev => [data, ...prev]);
+    } catch (error) {
+      console.error('Erro ao adicionar transação:', error);
+    }
   };
 
-  const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  const deleteTransaction = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setTransactions(prev => prev.filter(t => t.id !== id));
+    } catch (error) {
+      console.error('Erro ao deletar transação:', error);
+    }
   };
 
-  const updateTransaction = (id: string, transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
-    setTransactions(prev => prev.map(t => 
-      t.id === id ? { ...t, ...transaction } : t
-    ));
+  const updateTransaction = async (id: string, transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update(transaction)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setTransactions(prev => prev.map(t => t.id === id ? data : t));
+    } catch (error) {
+      console.error('Erro ao atualizar transação:', error);
+    }
   };
 
   const getBalance = () => {
     return transactions.reduce((acc, transaction) => {
       return transaction.type === 'income' 
-        ? acc + transaction.amount 
-        : acc - transaction.amount;
+        ? acc + Number(transaction.amount)
+        : acc - Number(transaction.amount);
     }, 0);
   };
 
@@ -119,9 +158,13 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       getTransactionsByType,
       getTransactionsByMonth,
       getTransactionsByCategory,
-      categories
+      categories,
+      loading
     }}>
       {children}
     </TransactionsContext.Provider>
   );
 };
+
+// Manter compatibilidade com o tipo existente
+export type { Transaction };

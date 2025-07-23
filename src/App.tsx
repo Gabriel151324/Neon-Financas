@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { AuthProvider } from './contexts/AuthContext';
+import React from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TransactionsProvider } from './contexts/TransactionsContext';
 import { GoalsProvider } from './contexts/GoalsContext';
@@ -10,12 +10,14 @@ import TransactionsList from './components/TransactionsList';
 import TransactionModal from './components/TransactionModal';
 import Goals from './components/Goals';
 import Tips from './components/Tips';
+import AuthScreen from './components/Auth/AuthScreen';
 import { Transaction } from './contexts/TransactionsContext';
 
 const AppContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [showTransactionModal, setShowTransactionModal] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
+  const { user, loading } = useAuth();
+  const [activeTab, setActiveTab] = React.useState('dashboard');
+  const [showTransactionModal, setShowTransactionModal] = React.useState(false);
+  const [editingTransaction, setEditingTransaction] = React.useState<Transaction | undefined>();
 
   const handleEditTransaction = (transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -28,7 +30,7 @@ const AppContent: React.FC = () => {
   };
 
   // PWA Setup
-  useEffect(() => {
+  React.useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then(registration => {
@@ -39,6 +41,23 @@ const AppContent: React.FC = () => {
         });
     }
   }, []);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth screen if user is not logged in
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   const renderContent = () => {
     switch (activeTab) {

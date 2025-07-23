@@ -1,26 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-
-export interface Goal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  deadline?: string;
-  createdAt: string;
-  completedAt?: string;
-}
+import { supabase, Goal } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 interface GoalsContextType {
   goals: Goal[];
-  addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>) => void;
-  deleteGoal: (id: string) => void;
-  updateGoal: (id: string, goal: Omit<Goal, 'id' | 'createdAt'>) => void;
-  updateGoalProgress: (id: string, amount: number) => void;
+  addGoal: (goal: Omit<Goal, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+  updateGoal: (id: string, goal: Omit<Goal, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
+  updateGoalProgress: (id: string, amount: number) => Promise<void>;
   getCompletedGoals: () => Goal[];
   getActiveGoals: () => Goal[];
   getGoalProgress: (goal: Goal) => number;
   isGoalCompleted: (goal: Goal) => boolean;
+  loading: boolean;
 }
 
 const GoalsContext = createContext<GoalsContextType | undefined>(undefined);
@@ -34,77 +26,142 @@ export const useGoals = () => {
 };
 
 export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Load goals from localStorage on mount
-  useEffect(() => {
-    const savedGoals = localStorage.getItem('neon-finances-goals');
-    if (savedGoals) {
-      try {
-        const parsedGoals = JSON.parse(savedGoals);
-        setGoals(parsedGoals);
-      } catch (error) {
-        console.error('Error loading goals from localStorage:', error);
-      }
+  // Carregar metas do usuário
+  const loadGoals = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setGoals(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar metas:', error);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  };
 
-  // Save goals to localStorage whenever goals change
   useEffect(() => {
-    localStorage.setItem('neon-finances-goals', JSON.stringify(goals));
-  }, [goals]);
+    if (user) {
+      loadGoals();
+    } else {
+      setGoals([]);
+    }
+  }, [user]);
 
-  const addGoal = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
-    const newGoal: Goal = {
-      ...goal,
-      id: uuidv4(),
-      createdAt: new Date().toISOString(),
-      completedAt: goal.currentAmount >= goal.targetAmount ? new Date().toISOString() : undefined
-    };
-    setGoals(prev => [newGoal, ...prev]);
-  };
+  const addGoal = async (goal: Omit<Goal, 'id' | 'user_id' | 'created_at'>) => {
+    if (!user) return;
 
-  const deleteGoal = (id: string) => {
-    setGoals(prev => prev.filter(g => g.id !== id));
-  };
-
-  const updateGoal = (id: string, goal: Omit<Goal, 'id' | 'createdAt'>) => {
-    setGoals(prev => prev.map(g => 
-      g.id === id ? { 
-        ...g, 
+    try {
+      const goalData = {
         ...goal,
-        completedAt: goal.currentAmount >= goal.targetAmount ? new Date().toISOString() : undefined
-      } : g
-    ));
+        user_id: user.id,
+        completed_at: goal.current_amount >= goal.target_amount ? new Date().toISOString() : null
+      };
+
+      const { data, error } = await supabase
+        .from('goals')
+        .insert([goalData])
+        .select()
+        .single();
+
+      if (error) throw error;
+      setGoals(prev => [data, ...prev]);
+    } catch (error) {
+      console.error('Erro ao adicionar meta:', error);
+    }
   };
 
-  const updateGoalProgress = (id: string, amount: number) => {
-    const goal = goals.find(g => g.id === id);
-    if (!goal) return;
+  const deleteGoal = async (id: string) => {
+    if (!user) return;
 
-    setGoals(prev => prev.map(g => 
-      g.id === id ? { 
-        ...g, 
-        currentAmount: amount,
-        completedAt: amount >= goal.targetAmount ? new Date().toISOString() : undefined
-      } : g
-    ));
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setGoals(prev => prev.filter(g => g.id !== id));
+    } catch (error) {
+      console.error('Erro ao deletar meta:', error);
+    }
+  };
+
+  const updateGoal = async (id: string, goal: Omit<Goal, 'id' | 'user_id' | 'created_at'>) => {
+    if (!user) return;
+
+    try {
+      const goalData = {
+        ...goal,
+        completed_at: goal.current_amount >= goal.target_amount ? new Date().toISOString() : null
+      };
+
+      const { data, error } = await supabase
+        .from('goals')
+        .update(goalData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setGoals(prev => prev.map(g => g.id === id ? data : g));
+    } catch (error) {
+      console.error('Erro ao atualizar meta:', error);
+    }
+  };
+
+  const updateGoalProgress = async (id: string, amount: number) => {
+    const goal = goals.find(g => g.id === id);
+    if (!goal || !user) return;
+
+    try {
+      const goalData = {
+        current_amount: amount,
+        completed_at: amount >= goal.target_amount ? new Date().toISOString() : null
+      };
+
+      const { data, error } = await supabase
+        .from('goals')
+        .update(goalData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setGoals(prev => prev.map(g => g.id === id ? data : g));
+    } catch (error) {
+      console.error('Erro ao atualizar progresso da meta:', error);
+    }
   };
 
   const getCompletedGoals = () => {
-    return goals.filter(g => g.completedAt);
+    return goals.filter(g => g.completed_at);
   };
 
   const getActiveGoals = () => {
-    return goals.filter(g => !g.completedAt);
+    return goals.filter(g => !g.completed_at);
   };
 
   const getGoalProgress = (goal: Goal) => {
-    return Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
+    return Math.min((Number(goal.current_amount) / Number(goal.target_amount)) * 100, 100);
   };
 
   const isGoalCompleted = (goal: Goal) => {
-    return goal.currentAmount >= goal.targetAmount;
+    return Number(goal.current_amount) >= Number(goal.target_amount);
   };
 
   return (
@@ -117,9 +174,13 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       getCompletedGoals,
       getActiveGoals,
       getGoalProgress,
-      isGoalCompleted
+      isGoalCompleted,
+      loading
     }}>
       {children}
     </GoalsContext.Provider>
   );
 };
+
+// Manter compatibilidade com o tipo existente
+export type { Goal };
