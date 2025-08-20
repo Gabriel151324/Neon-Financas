@@ -182,5 +182,4 @@ export const GoalsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
-// Manter compatibilidade com o tipo existente
 export type { Goal };

@@ -13,35 +13,35 @@ if (!supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Types
+// Database Types
 export interface Transaction {
-  id?: string
+  id: string
   description: string
   amount: number
   date: string
   category: string
   type: 'income' | 'expense'
-  user_id?: string
-  created_at?: string
+  user_id: string
+  created_at: string
 }
 
 export interface Goal {
-  id?: string
+  id: string
   name: string
   target_amount: number
   current_amount: number
   deadline?: string
-  user_id?: string
-  created_at?: string
+  user_id: string
+  created_at: string
   completed_at?: string
 }
 
 export interface Challenge {
-  id?: string
+  id: string
   description: string
-  status: 'pending' | 'completed'
-  user_id?: string
-  created_at?: string
+  status: 'pending' | 'accepted' | 'completed'
   week: string
+  user_id: string
+  created_at: string
   completed_at?: string
 }

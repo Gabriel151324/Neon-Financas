@@ -166,5 +166,4 @@ export const TransactionsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   );
 };
 
-// Manter compatibilidade com o tipo existente
 export type { Transaction };
